@@ -1,61 +1,42 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Device from "expo-device";
+import { Platform, StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { AnimatedIcon } from "@/components/animated-icon";
+import { HintRow } from "@/components/hint-row";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { WebBadge } from "@/components/web-badge";
+import { BottomTabInset, Colors, MaxContentWidth, Spacing } from "@/constants/theme";
+import { Lucide } from "@react-native-vector-icons/lucide";
+import { Link } from "expo-router";
+import { useTheme } from "@/hooks/use-theme";
+import useBLE from "@/hooks/use-ble";
+import { ScanState } from "@/enums/scan-state";
 
 export default function HomeScreen() {
+  const theme = useTheme();
+  const { startScanning, scanningStatus, stopDeviceScan } = useBLE();
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
+          <ThemedText>No Devices Discovered Yet...</ThemedText>
+          {scanningStatus === ScanState.IDLE ? (
+            <TouchableOpacity style={styles.button} onPress={startScanning}>
+              <ThemedText>Scan For New Devices</ThemedText>
+              <Lucide name="bluetooth-searching" size={30} color={theme.accent} />
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity onPress={stopDeviceScan} style={styles.button}>
+                Stop Scanning
+              </TouchableOpacity>
+            </>
+          )}
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
+        {Platform.OS === "web" && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
   );
@@ -64,33 +45,46 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    justifyContent: "center",
+    flexDirection: "row",
   },
+  button: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "nowrap",
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 0,
+    width: 180,
+    borderColor: "red",
+    padding: 10,
+    marginTop: 15,
+  },
+
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    alignItems: 'center',
+    alignItems: "center",
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
   },
   heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
   },
   title: {
-    textAlign: 'center',
+    textAlign: "center",
   },
   code: {
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   stepContainer: {
     gap: Spacing.three,
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
