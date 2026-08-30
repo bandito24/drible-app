@@ -25,7 +25,6 @@ export default function StackLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ title: "Homie" }} />
-          <Stack.Screen name="discover" options={{ title: "Discover Devices" }} />
         </Stack>
       </BluetoothConnectionProvider>
     </ThemeProvider>

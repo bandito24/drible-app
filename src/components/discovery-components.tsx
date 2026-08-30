@@ -3,13 +3,14 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useBluetoothConnection } from "@/contexts/ble-manager-context";
 import useBLE from "@/hooks/use-ble";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { AppStyles } from "@/lib/styles";
 import { Device } from "react-native-ble-plx";
+import { GATT } from "@/constants/gatt-chars";
 
 export default function DiscoverScreen() {
-  const { stopDeviceScan, startScanning, scannedDevices, scanErrors } = useBLE();
+  const { stopDeviceScan, startScanning, scanErrors, connectedDevices } = useBLE();
   useEffect(() => {
     console.log("Scan Error:", scanErrors);
   }, [scanErrors]);
@@ -20,7 +21,7 @@ export default function DiscoverScreen() {
       stopDeviceScan();
     };
   }, []);
-  const devices = Object.values(scannedDevices);
+  const devices = Object.values(connectedDevices);
   console.log(devices.length);
   return (
     <ThemedView>
@@ -32,26 +33,56 @@ export default function DiscoverScreen() {
     </ThemedView>
   );
 }
-function ScannedDeviceCard({ device }: { device: Device }) {
+export function ScannedDeviceCard({ device }: { device: Device }) {
   const theme = useTheme();
-  const rssiIndication = getRssiStatus(device.rssi);
+  const [rssi, setRssi] = useState<null | number>(null);
+  useEffect(() => {
+    async function readRssi() {
+      const services = await device.readCharacteristicForService(GATT.SERVICE, GATT.SYS_CONF_CHAR);
+
+      console.log(services.value);
+      const readDevice = await device.readRSSI();
+      setRssi(readDevice.rssi);
+    }
+    const interval = setInterval(() => {
+      readRssi();
+    }, 5000);
+
+    readRssi();
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+  const rssiIndication = getRssiStatus(rssi);
   const styles = useStyleSheet();
   return (
     <TouchableOpacity style={styles.card}>
       <ThemedText style={styles.cardText}>{device?.name ?? "Unknown Name"}</ThemedText>
-      <View style={{ justifyContent: "center" }}>
+
+      <View
+        style={{
+          alignContent: "center",
+          justifyContent: "center",
+          visibility: rssi ? "visible" : "hidden",
+        }}
+      >
         <View
           style={{
             backgroundColor: rssiIndication.color,
-            minWidth: 0,
+            width: 200,
             borderRadius: 20,
-            justifyContent: "center",
-            width: "auto",
-            alignSelf: "center",
+            alignContent: "center",
+            alignItems: "center",
           }}
         >
-          <ThemedText style={{ fontSize: AppStyles.fontSize.sm, fontWeight: 400, padding: 5 }}>
-            {rssiIndication.description}: {device.rssi}
+          <ThemedText
+            style={{
+              fontSize: AppStyles.fontSize.sm,
+              fontWeight: 400,
+              padding: 5,
+            }}
+          >
+            {rssiIndication.description}: {rssi}
           </ThemedText>
         </View>
       </View>

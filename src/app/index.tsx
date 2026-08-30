@@ -13,15 +13,23 @@ import { Link } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
 import useBLE from "@/hooks/use-ble";
 import { ScanState } from "@/enums/scan-state";
+import { useEffect } from "react";
+import { ScannedDeviceCard } from "@/components/discovery-components";
 
 export default function HomeScreen() {
   const theme = useTheme();
-  const { startScanning, scanningStatus, stopDeviceScan } = useBLE();
+  const { startScanning, connectedDevices, scanningStatus, stopDeviceScan } = useBLE();
+
+  const devices = Object.values(connectedDevices);
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
-          <ThemedText>No Devices Discovered Yet...</ThemedText>
+          {devices.length ? (
+            devices.map((device) => <ScannedDeviceCard key={device.id} device={device} />)
+          ) : (
+            <ThemedText>No Devices Discovered Yet...</ThemedText>
+          )}
           {scanningStatus === ScanState.IDLE ? (
             <TouchableOpacity style={styles.button} onPress={startScanning}>
               <ThemedText>Scan For New Devices</ThemedText>
@@ -30,7 +38,7 @@ export default function HomeScreen() {
           ) : (
             <>
               <TouchableOpacity onPress={stopDeviceScan} style={styles.button}>
-                Stop Scanning
+                <ThemedText>Stop Scanning</ThemedText>
               </TouchableOpacity>
             </>
           )}

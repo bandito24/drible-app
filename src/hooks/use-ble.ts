@@ -3,7 +3,7 @@ import { useBluetoothConnection } from "@/contexts/ble-manager-context";
 import { ConnectionState } from "@/enums/connection-state";
 import { ScanState } from "@/enums/scan-state";
 import NotifyUi from "@/util/notify-ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import base64 from "react-native-base64";
 import { BleError, BleManager, Characteristic, Device, State } from "react-native-ble-plx";
@@ -18,33 +18,41 @@ const servicesArr = Object.values(SERVICES);
 
 function useBLE() {
   const { bleManager } = useBluetoothConnection();
-  const [scannedDevices, setScannedDevices] = useState<Record<number, Device>>({});
   const [scanErrors, setScanErrors] = useState<BleError[]>([]);
 
-  const [connectedDevices, setConnectedDevices] = useState<Record<number, Device>>({});
+  //NOTE: Id is UUID on mac
+  const [connectedDevices, setConnectedDevices] = useState<Record<string, Device>>({});
   const [scanningStatus, setScanningStatus] = useState<ScanState>(ScanState.IDLE);
+  const [connectionSemaphoreTaken, setConnectionSemaphoreTaken] = useState<boolean>(true);
+  const connectionQueue = useRef(new Map<string, Device>());
 
   async function stopDeviceScan() {
     await bleManager.stopDeviceScan();
+    console.log("Done Scanning");
     setScanningStatus(ScanState.IDLE);
   }
   async function startScanning() {
     await waitUntilBluetoothReady();
     console.log("Now Scanning");
     setScanningStatus(ScanState.SCANNING);
-    await bleManager.startDeviceScan(
+    setTimeout(async () => {
+      await stopDeviceScan();
+      await processQueue();
+    }, 5000);
+    //FIX: Use a reference to store ids to prevent race conditions on connect
+
+    bleManager.startDeviceScan(
       null,
       // servicesArr,
       { allowDuplicates: false },
       async (err: BleError | null, device: Device | null) => {
-        if (device && device?.name === "Drippet" && !(device.id in connectedDevices)) {
-          //TODO: Probably should use ServiceUUID but not currently broadcasting it
-          const connected = await bleManager.connectToDevice(device.id);
-          if (connected) {
-            setConnectedDevices((prev) => {
-              return { ...prev, [device.id]: device };
-            });
+        console.log("Discovered Device. Name: " + device?.name);
+        if (device && device?.name === "Drippet" && !connectionQueue.current.has(device.id)) {
+          const alreadyConnected = await bleManager.isDeviceConnected(device.id);
+          if (alreadyConnected) {
+            return;
           }
+          connectionQueue.current.set(device.id, device);
         } else if (err) {
           console.error("stop scanning due to err");
           setScanErrors((prev) => [...prev, err]);
@@ -54,6 +62,38 @@ function useBLE() {
       },
     );
   }
+
+  async function processQueue() {
+    connectionQueue.current.forEach(async (device, id) => {
+      console.log("conn queue running");
+      console.log("should work");
+      const isAlreadyConnected = await bleManager.isDeviceConnected(id);
+      if (!isAlreadyConnected) {
+        await connectDevice(device);
+      }
+
+      connectionQueue.current.delete(id);
+    });
+  }
+
+  //useEffect(() => {
+  //  async function processConnectionQueue() {
+  //    console.log("conn queue running");
+  //    if (connectedDevices.length) {
+  //      return;
+  //    }
+  //    if (connectionQueue.length) {
+  //      console.log("should work");
+  //      const nextDevice = connectionQueue[0];
+  //      const isAlreadyConnected = await bleManager.isDeviceConnected(nextDevice.id);
+  //      if (!isAlreadyConnected) {
+  //        await connectDevice(nextDevice);
+  //      }
+  //      setConnectionQueue((prev) => prev.filter((dev) => dev.id !== nextDevice.id));
+  //    }
+  //  }
+  //  processConnectionQueue();
+  //}, [connectionQueue]);
   function waitUntilBluetoothReady() {
     return new Promise<void>((resolve, reject) => {
       const subscription = bleManager.onStateChange((state) => {
@@ -82,36 +122,47 @@ function useBLE() {
   }
   async function connectDevice(device: Device) {
     try {
-      await bleManager.stopDeviceScan();
-      setScanningStatus(ScanState.IDLE);
-      const connectedDevice = await bleManager.connectToDevice(device.id);
-      setConnectedDevice(connectedDevice);
+      console.log("1: entering connectDevice", device.id);
+
+      console.log("2: stopping scan");
+      await stopDeviceScan();
+      console.log("3: scan stopped");
+
+      console.log("4: calling device.connect()", device.id);
+      const connected = await device.connect();
+      console.log("5: CONNECTED", connected.id);
+
+      setConnectedDevices((prev) => ({
+        ...prev,
+        [connected.id]: connected,
+      }));
+      //  NotifyUi.alertInfo("Connected With New Device");
+      // const sub = connected.onDisconnected(async (err, disconnected) => {
+      //   setConnectedDevices((prev) => {
+      //     const tmp = { ...prev };
+      //     delete tmp?.[disconnected.id];
+      //     return tmp;
+      //   });
+      //   NotifyUi.alertInfo("Connected Device Disconnected");
+      //   sub.remove();
+
+      //   if (err) {
+      //     NotifyUi.alertErr((err?.reason ?? "no reason") + (err?.stack ?? "no stack"));
+      //   } else {
+      //     await connectDevice(disconnected);
+      //   }
+      // });
     } catch (e) {
       console.error(e);
     }
   }
-  useEffect(() => {
-    if (!connectedDevice) return;
-    const subscription = connectedDevice.onDisconnected((err: BleError | null, device: Device) => {
-      setConnectedDevice(null);
-      if (err) {
-        NotifyUi.alertErr("Device Unexpectedly Disconnected:" + err.reason);
-        return;
-      }
-      NotifyUi.alertInfo("Device Disconnected");
-    });
-    return () => {
-      subscription.remove();
-    };
-  });
 
   return {
     scanningStatus,
     stopDeviceScan,
-    scannedDevices,
     scanErrors,
     startScanning,
-    connectedDevice,
+    connectedDevices,
   };
 }
 
