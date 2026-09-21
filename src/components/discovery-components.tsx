@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { AppStyles } from "@/lib/styles";
 import { Device } from "react-native-ble-plx";
 import { GATT } from "@/constants/gatt-chars";
+import { Link } from "expo-router";
 
 export default function DiscoverScreen() {
   const { stopDeviceScan, startScanning, scanErrors, connectedDevices } = useBLE();
@@ -38,9 +39,9 @@ export function ScannedDeviceCard({ device }: { device: Device }) {
   const [rssi, setRssi] = useState<null | number>(null);
   useEffect(() => {
     async function readRssi() {
-      const services = await device.readCharacteristicForService(GATT.SERVICE, GATT.SYS_CONF_CHAR);
+      //  const services = await device.readCharacteristicForService(GATT.SERVICE, GATT.SYS_CONF_CHAR);
 
-      console.log(services.value);
+      //  console.log(services.value);
       const readDevice = await device.readRSSI();
       setRssi(readDevice.rssi);
     }
@@ -56,37 +57,39 @@ export function ScannedDeviceCard({ device }: { device: Device }) {
   const rssiIndication = getRssiStatus(rssi);
   const styles = useStyleSheet();
   return (
-    <TouchableOpacity style={styles.card}>
-      <ThemedText style={styles.cardText}>{device?.name ?? "Unknown Name"}</ThemedText>
+    <Link href={{ pathname: "/[device]", params: { device: device.id } }} asChild>
+      <TouchableOpacity style={styles.card}>
+        <ThemedText style={styles.cardText}>{device?.name ?? "Unknown Name"}</ThemedText>
 
-      <View
-        style={{
-          alignContent: "center",
-          justifyContent: "center",
-          visibility: rssi ? "visible" : "hidden",
-        }}
-      >
         <View
           style={{
-            backgroundColor: rssiIndication.color,
-            width: 200,
-            borderRadius: 20,
             alignContent: "center",
-            alignItems: "center",
+            justifyContent: "center",
+            visibility: rssi ? "visible" : "hidden",
           }}
         >
-          <ThemedText
+          <View
             style={{
-              fontSize: AppStyles.fontSize.sm,
-              fontWeight: 400,
-              padding: 5,
+              backgroundColor: rssiIndication.color,
+              width: 200,
+              borderRadius: 20,
+              alignContent: "center",
+              alignItems: "center",
             }}
           >
-            {rssiIndication.description}: {rssi}
-          </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: AppStyles.fontSize.sm,
+                fontWeight: 400,
+                padding: 5,
+              }}
+            >
+              {rssiIndication.description}: {rssi}
+            </ThemedText>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Link>
   );
 }
 

@@ -23,7 +23,6 @@ function useBLE() {
   //NOTE: Id is UUID on mac
   const [connectedDevices, setConnectedDevices] = useState<Record<string, Device>>({});
   const [scanningStatus, setScanningStatus] = useState<ScanState>(ScanState.IDLE);
-  const [connectionSemaphoreTaken, setConnectionSemaphoreTaken] = useState<boolean>(true);
   const connectionQueue = useRef(new Map<string, Device>());
 
   async function stopDeviceScan() {
@@ -38,8 +37,7 @@ function useBLE() {
     setTimeout(async () => {
       await stopDeviceScan();
       await processQueue();
-    }, 5000);
-    //FIX: Use a reference to store ids to prevent race conditions on connect
+    }, 2000);
 
     bleManager.startDeviceScan(
       null,
@@ -76,24 +74,6 @@ function useBLE() {
     });
   }
 
-  //useEffect(() => {
-  //  async function processConnectionQueue() {
-  //    console.log("conn queue running");
-  //    if (connectedDevices.length) {
-  //      return;
-  //    }
-  //    if (connectionQueue.length) {
-  //      console.log("should work");
-  //      const nextDevice = connectionQueue[0];
-  //      const isAlreadyConnected = await bleManager.isDeviceConnected(nextDevice.id);
-  //      if (!isAlreadyConnected) {
-  //        await connectDevice(nextDevice);
-  //      }
-  //      setConnectionQueue((prev) => prev.filter((dev) => dev.id !== nextDevice.id));
-  //    }
-  //  }
-  //  processConnectionQueue();
-  //}, [connectionQueue]);
   function waitUntilBluetoothReady() {
     return new Promise<void>((resolve, reject) => {
       const subscription = bleManager.onStateChange((state) => {
@@ -122,36 +102,14 @@ function useBLE() {
   }
   async function connectDevice(device: Device) {
     try {
-      console.log("1: entering connectDevice", device.id);
-
-      console.log("2: stopping scan");
-      await stopDeviceScan();
-      console.log("3: scan stopped");
-
-      console.log("4: calling device.connect()", device.id);
       const connected = await device.connect();
-      console.log("5: CONNECTED", connected.id);
+      await device.discoverAllServicesAndCharacteristics();
+      console.log("CONNECTED", connected.id);
 
       setConnectedDevices((prev) => ({
         ...prev,
         [connected.id]: connected,
       }));
-      //  NotifyUi.alertInfo("Connected With New Device");
-      // const sub = connected.onDisconnected(async (err, disconnected) => {
-      //   setConnectedDevices((prev) => {
-      //     const tmp = { ...prev };
-      //     delete tmp?.[disconnected.id];
-      //     return tmp;
-      //   });
-      //   NotifyUi.alertInfo("Connected Device Disconnected");
-      //   sub.remove();
-
-      //   if (err) {
-      //     NotifyUi.alertErr((err?.reason ?? "no reason") + (err?.stack ?? "no stack"));
-      //   } else {
-      //     await connectDevice(disconnected);
-      //   }
-      // });
     } catch (e) {
       console.error(e);
     }
