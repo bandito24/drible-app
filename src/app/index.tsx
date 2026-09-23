@@ -1,5 +1,11 @@
 import * as Device from "expo-device";
-import { Platform, StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnimatedIcon } from "@/components/animated-icon";
@@ -13,38 +19,59 @@ import { Link } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
 import useBLE from "@/hooks/use-ble";
 import { ScanState } from "@/enums/scan-state";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ScannedDeviceCard } from "@/components/discovery-components";
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const [performedInitalScan, setPerformedInitialScan] = useState<boolean>(false);
   const { startScanning, connectedDevices, scanningStatus, stopDeviceScan } = useBLE();
 
   const devices = Object.values(connectedDevices);
+
+  useEffect(() => {
+    if (!devices.length) {
+      startScanning();
+    }
+  }, []);
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
+          {scanningStatus === ScanState.SCANNING ? (
+            <ThemedView>
+              <ActivityIndicator size="large" color="#00ff00" />
+              <ThemedText>Scanning For Devices</ThemedText>
+            </ThemedView>
+          ) : null}
           {devices.length ? (
             devices.map((device) => <ScannedDeviceCard key={device.id} device={device} />)
-          ) : (
-            <ThemedText>No Devices Discovered Yet...</ThemedText>
-          )}
-          {scanningStatus === ScanState.IDLE ? (
-            <TouchableOpacity style={styles.button} onPress={startScanning}>
-              <ThemedText>Scan For New Devices</ThemedText>
-              <Lucide name="bluetooth-searching" size={30} color={theme.accent} />
-            </TouchableOpacity>
-          ) : (
-            <>
-              <TouchableOpacity onPress={stopDeviceScan} style={styles.button}>
-                <ThemedText>Stop Scanning</ThemedText>
+          ) : scanningStatus === ScanState.IDLE ? (
+            <ThemedText>No Discoverable Drippets...</ThemedText>
+          ) : null}
+          <ThemedView
+            style={{
+              position: "absolute",
+              display: "flex",
+              bottom: 0,
+              flexDirection: "row",
+              justifyContent: "flex-end",
+            }}
+          >
+            {scanningStatus === ScanState.IDLE ? (
+              <TouchableOpacity style={styles.button} onPress={startScanning}>
+                <ThemedText>Scan For New Devices</ThemedText>
+                <Lucide name="bluetooth-searching" size={30} color={theme.accent} />
               </TouchableOpacity>
-            </>
-          )}
+            ) : (
+              <>
+                <TouchableOpacity onPress={stopDeviceScan} style={styles.button}>
+                  <ThemedText>Stop Scanning</ThemedText>
+                </TouchableOpacity>
+              </>
+            )}
+          </ThemedView>
         </ThemedView>
-
-        {Platform.OS === "web" && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
   );

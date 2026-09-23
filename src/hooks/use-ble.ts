@@ -37,7 +37,7 @@ function useBLE() {
     setTimeout(async () => {
       await stopDeviceScan();
       await processQueue();
-    }, 2000);
+    }, 5000);
 
     bleManager.startDeviceScan(
       null,
@@ -63,8 +63,6 @@ function useBLE() {
 
   async function processQueue() {
     connectionQueue.current.forEach(async (device, id) => {
-      console.log("conn queue running");
-      console.log("should work");
       const isAlreadyConnected = await bleManager.isDeviceConnected(id);
       if (!isAlreadyConnected) {
         await connectDevice(device);

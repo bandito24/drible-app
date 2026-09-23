@@ -9,6 +9,17 @@ import { AppStyles } from "@/lib/styles";
 import { Device } from "react-native-ble-plx";
 import { GATT } from "@/constants/gatt-chars";
 import { Link } from "expo-router";
+import {
+  Signal,
+  SignalHigh,
+  SignalHighIcon,
+  WifiZero,
+  SignalLow,
+  SignalMedium,
+  SignalZero,
+} from "lucide-react-native";
+
+import { Lucide } from "@react-native-vector-icons/lucide";
 
 export default function DiscoverScreen() {
   const { stopDeviceScan, startScanning, scanErrors, connectedDevices } = useBLE();
@@ -63,30 +74,13 @@ export function ScannedDeviceCard({ device }: { device: Device }) {
 
         <View
           style={{
-            alignContent: "center",
+            transform: [{ translateY: -5 }],
+            alignItems: "center",
             justifyContent: "center",
             visibility: rssi ? "visible" : "hidden",
           }}
         >
-          <View
-            style={{
-              backgroundColor: rssiIndication.color,
-              width: 200,
-              borderRadius: 20,
-              alignContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <ThemedText
-              style={{
-                fontSize: AppStyles.fontSize.sm,
-                fontWeight: 400,
-                padding: 5,
-              }}
-            >
-              {rssiIndication.description}: {rssi}
-            </ThemedText>
-          </View>
+          {rssiIndication.icon}
         </View>
       </TouchableOpacity>
     </Link>
@@ -99,6 +93,8 @@ function useStyleSheet() {
   const styles = StyleSheet.create({
     card: {
       alignItems: "center",
+      justifyContent: "space-between",
+      flexDirection: "row",
       borderRadius: 10,
       padding: 10,
       width: 350,
@@ -110,34 +106,67 @@ function useStyleSheet() {
       fontSize: AppStyles.fontSize.xl,
       fontWeight: "bold",
       color: theme.accent,
-      marginBottom: 10,
     },
   });
   return styles;
 }
+//const RSSI_STATUS = {
+//  excellent: {
+//    color: "#16A34A",
+//    icon: <Signal />,
+//    description: "Excellent",
+//  },
+//  good: {
+//    color: "#65A30D",
+//    icon: <SignalHigh />,
+//    description: "Good",
+//  },
+//  fair: {
+//    color: "#EAB308",
+//    icon: <SignalMedium />,
+//    description: "Fair",
+//  },
+//  weak: {
+//    color: "#F97316",
+//    icon: <SignalLow />,
+//    description: "Weak",
+//  },
+//  veryWeak: {
+//    color: "#EF4444",
+//    icon: <SignalZero />,
+//    description: "Very weak",
+//  },
+//  unusable: {
+//    color: "#991B1B",
+//    icon: <SignalZero />,
+//    description: "Likely unusable",
+//  },
+//} as const;
+
+const iconSize = 40;
 const RSSI_STATUS = {
   excellent: {
-    color: "#16A34A",
+    icon: <Lucide name="wifi" size={iconSize} color="#16A34A" />,
     description: "Excellent",
   },
   good: {
-    color: "#65A30D",
+    icon: <Lucide name="wifi-high" size={iconSize} color="#65A30D" />,
     description: "Good",
   },
   fair: {
-    color: "#EAB308",
+    icon: <Lucide name="wifi-high" size={iconSize} color="#EAB308" />,
     description: "Fair",
   },
   weak: {
-    color: "#F97316",
+    icon: <Lucide name="wifi-low" size={iconSize} color="#F97316" />,
     description: "Weak",
   },
   veryWeak: {
-    color: "#EF4444",
+    icon: <Lucide name="wifi-zero" size={iconSize} color="#EF4444" />,
     description: "Very weak",
   },
   unusable: {
-    color: "#991B1B",
+    icon: <Lucide name="wifi-off" size={iconSize} color="#991B1B" />,
     description: "Likely unusable",
   },
 } as const;

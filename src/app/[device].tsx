@@ -24,10 +24,11 @@ export default function Device() {
       throw new Error("Unreadable characteristic read");
     }
     const test = ByteIf.b64toBytes(config.value);
-    setWaterNodes((prev) => [...prev, new WaterNode(test)]);
+    const waterNode = new WaterNode(test);
+    setWaterNodes((prev) => [...prev, waterNode]);
 
-    console.log(config.value);
     console.log(test);
+    console.log(waterNode.toString());
   }, []);
   useEffect(() => {
     fetchData();
