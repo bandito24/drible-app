@@ -2,7 +2,6 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useBluetoothConnection } from "@/contexts/ble-manager-context";
-import useBLE from "@/hooks/use-ble";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { AppStyles } from "@/lib/styles";
@@ -22,7 +21,8 @@ import {
 import { Lucide } from "@react-native-vector-icons/lucide";
 
 export default function DiscoverScreen() {
-  const { stopDeviceScan, startScanning, scanErrors, connectedDevices } = useBLE();
+  const { useBle } = useBluetoothConnection();
+  const { stopDeviceScan, startScanning, scanErrors, connectedDevices } = useBle;
   useEffect(() => {
     console.log("Scan Error:", scanErrors);
   }, [scanErrors]);

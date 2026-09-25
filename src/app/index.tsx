@@ -17,15 +17,17 @@ import { BottomTabInset, Colors, MaxContentWidth, Spacing } from "@/constants/th
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { Link } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
-import useBLE from "@/hooks/use-ble";
 import { ScanState } from "@/enums/scan-state";
 import { useEffect, useState } from "react";
 import { ScannedDeviceCard } from "@/components/discovery-components";
+import { useBluetoothConnection } from "@/contexts/ble-manager-context";
+import MakeNotification from "@/lib/MakeNotification";
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [performedInitalScan, setPerformedInitialScan] = useState<boolean>(false);
-  const { startScanning, connectedDevices, scanningStatus, stopDeviceScan } = useBLE();
+  const ble = useBluetoothConnection();
+  const { startScanning, connectedDevices, scanningStatus, stopDeviceScan } = ble.useBle;
 
   const devices = Object.values(connectedDevices);
 

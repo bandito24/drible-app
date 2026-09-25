@@ -1,43 +1,58 @@
 import { ThemedText } from "@/components/themed-text";
 import { GATT } from "@/constants/gatt-chars";
 import { useBluetoothConnection } from "@/contexts/ble-manager-context";
-import useBLE from "@/hooks/use-ble";
 import ByteIf from "@/lib/ByteIf";
-import { WaterNode } from "@/lib/water-node";
+import { DrippetHead, WaterNode } from "@/lib/drippet-node";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import base64 from "react-native-base64";
 
-export default function Device() {
-  const { bleManager } = useBluetoothConnection();
-  const [waterNodes, setWaterNodes] = useState<WaterNode[]>([]);
-  const { connectedDevices } = useBLE();
-  const { device: deviceId } = useLocalSearchParams<{ device: string }>();
-  const device = connectedDevices[deviceId];
-  const fetchData = useCallback(async () => {
-    const config = await bleManager.readCharacteristicForDevice(
-      deviceId,
-      GATT.SERVICE,
-      GATT.DURATIONS_CHAR,
-    );
-    if (!config.value) {
-      throw new Error("Unreadable characteristic read");
-    }
-    const test = ByteIf.b64toBytes(config.value);
-    const waterNode = new WaterNode(test);
-    setWaterNodes((prev) => [...prev, waterNode]);
+import { getTimeZone } from "react-native-localize";
 
-    console.log(test);
-    console.log(waterNode.toString());
-  }, []);
+export default function Device() {
+  const {
+    bleManager,
+    useBle: { connectedDevices },
+  } = useBluetoothConnection();
+
+  const { device: deviceId } = useLocalSearchParams<{ device: string }>();
+  const drippet = useRef<DrippetHead | undefined>(null);
   useEffect(() => {
-    fetchData();
-  }, [deviceId]);
+    console.log(connectedDevices);
+    if (connectedDevices?.[deviceId]) {
+      console.log("DOING");
+      drippet.current = new DrippetHead(connectedDevices[deviceId], bleManager);
+      initDrippet();
+    } else {
+      console.log("WONT WORK");
+    }
+    async function initDrippet() {
+      if (drippet.current) {
+        await drippet.current.init();
+        setWaterNodes(drippet.current.waterNodes);
+        const data = await drippet.current.getSysConfig();
+        console.log("data is", data);
+        const now = new Date();
+        const time = { day: now.getDay(), hour: now.getHours(), minute: now.getMinutes() };
+        //FIX: Set time and phase as one endpoint rather than separate
+        await drippet.current.setTime(time.hour, time.minute);
+        await drippet.current.setPhase(time.day);
+        if (data) {
+          console.log(ByteIf.printSystemTime(data));
+        }
+        console.log(time);
+      } else {
+        console.log("NO DRIPPET CURR");
+      }
+    }
+  }, [connectedDevices]);
+
+  const [waterNodes, setWaterNodes] = useState<WaterNode[]>([]);
+  const device = connectedDevices[deviceId];
+
   useEffect(() => {
-    waterNodes.forEach((val) => {
-      console.log(val.toString());
-    });
+    console.log(`has ${waterNodes.length} water nodes`);
   }, [waterNodes]);
 
-  return <ThemedText>Hi there, {deviceId}</ThemedText>;
+  return <ThemedText>Hi there</ThemedText>;
 }
